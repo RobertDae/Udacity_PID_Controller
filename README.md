@@ -1,98 +1,56 @@
-# CarND-Controls-PID
-Self-Driving Car Engineer Nanodegree Program
+## PID Controller (Self-Driving Car Engineer Nanodegree)
 
----
+In this project, a PID controller is utilized to control the steering angle and throttle of the car in the simulator.
 
-## Dependencies
+This project involves the Udacity Self-Driving Car Engineer Nanodegree Term 2 Simulator which can be downloaded from [here](https://github.com/udacity/self-driving-car-sim/releases).
+
+
+#### Dependencies
 
 * cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1(mac, linux), 3.81(Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
+* make >= 4.1 (Linux, Mac), 3.81 (Windows)
 * gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `./install-mac.sh` or `./install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
-* Simulator. You can download these from the [project intro page](https://github.com/udacity/self-driving-car-sim/releases) in the classroom.
+* [uWebSocketIO](https://github.com/uWebSockets/uWebSockets) with commit hash e94b6e1
 
-Fellow students have put together a guide to Windows set-up for the project [here](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/files/Kidnapped_Vehicle_Windows_Setup.pdf) if the environment you have set up for the Sensor Fusion projects does not work for this project. There's also an experimental patch for windows in this [PR](https://github.com/udacity/CarND-PID-Control-Project/pull/3).
 
-## Basic Build Instructions
+#### Build
+The PID controller program can be built and run by doing the following from the project top directory.
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./pid`. 
+```bash
+$> mkdir build
+$> cd build
+$> cmake ..
+$> make
+```
 
-Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
 
-## Editor Settings
+#### Run
+Run from the project top directory.
+```bash
+$> build/pid
+```
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+#### Demo
+![ANIMATION](readme_images/simulator-demo.gif)
 
-## Code Style
+[![LINK TO YOUTUBE](readme_images/video.png)](https://youtu.be/vs8lae_L3XY)
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
 
-## Project Instructions and Rubric
+#### Description
+The vehicle is controlled by two PID controllers. One of them takes the cross track error as an input and produces the correcting steering angle, while another one takes as an input maximum between absolute values of the cross track error and the steering angle and produces the throttle value. The latter should be responsive to changes of the parameters it depends on since it is reasonable to decrease speed either when the steering angle is steep or when there is a considerable cross track error. 
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+**P** - the proportional component of the PID controller. It steers the car along to road center, reference line. The larger the corresponding coefficient (parameter of the PID controller) the steeper steering angles. When this component used alone, the car starts to oscillate, and the oscillation amplitude increases with the time until, finally, the car crashes or leaves the road.
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
+**I** - the integral component of the PID controller. It is responsible for compensating the bias that the car's steering wheel might have. When this component used alone, the car leaves the road and starts the circular motion. 
 
-## Hints!
+**D** - the differential component of the PID controller. It is responsible for smoothing the car's oscillations around the reference line. It compensates the steering angle when the car approaches the center of the road. When this component used alone, the car is irresponsive to the road steepness and reacts only to little changes in the steepness. The car leaves the road as soon as the steep enough turn occurs.
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
 
-## Call for IDE Profiles Pull Requests
+#### Parameter Tuning
+Initially, the throttle was constant, and the parameters of the PID controller for steering were chosen to be P = 0.2, I = 0.004, D = 3.0. Sebastian Thrun proposed these values is his [online course on udacity.com](https://www.udacity.com/course/artificial-intelligence-for-robotics--cs373). Parameters worked quite well, and the car was able to complete the full circle with no tire leaving the drivable portion of the track surface.
+However, the driving was not smooth, and the twiddle algorithm was utilized to tune the parameters of the PID controller for steering. After a few iterations, the PID controller for throttle was turned on. At that moment parameters for steering PID controller were P=0.61, I=0.0155, D=13.0 and for throttle PID controller -- P=2.0, I=0.0, D=3.0. Then, there were a few more iterations after which there was a manual fine tuning again. The result parameters for the PID controllers are as follows: steering PID controller -- P=0.15, I=0.0165, D=5.0; throttle PID controller -- P=7.0, I=0.0, D=0.5.  With these parameters, the car can drive with the average speed more than 30 mph and smooth enough, without leaving the road surface.
 
-Help your fellow students!
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+#### Notice
+For comprehensive instructions on how to install and run project, please, refer to the following repo, which was used as a skeleton for this project: https://github.com/udacity/CarND-PID-Control-Project.
