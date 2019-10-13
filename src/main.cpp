@@ -33,12 +33,27 @@ string hasData(string s) {
 int main() {
   uWS::Hub h;
 
-  PID pid;
+  unsigned long long obs_cnt = 0; // counter of the processed observations
+  PID pid_steer;
+  PID pid_throttle;
   /**
    * TODO: Initialize the pid variable.
    */
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+  // How the parameters were tuned (manually + twiddle):
+  // steering: no twiddle -- P=0.2, I=0.004, D=3.0; throttle: fixed
+  // steering: twiddle -- P=0.2, I=0.004, D=3.0; throttle: fixed
+  // steering: twiddle -- P=0.41, I=0.02, D=8.0; throttle: fixed
+  // steering: twiddle -- P=0.609, I=0.015, D=10.0; throttle: fixed
+  // steering: twiddle -- P=0.61, I=0.0155, D=13.0; throttle: twiddle -- P=2.0, I=0.0, D=3.0
+  // steering: twiddle -- P=0.3, I=0.015, D=13.0; throttle: twiddle -- P=2.5, I=0.0, D=6.0
+  // steering: twiddle -- P=0.2, I=0.0165, D=7.0; throttle: twiddle P=5.0, I=0.0, D=8.0
+  // steering: no twiddle -- P=0.15, I=0.0165, D=5.0; throttle: no twiddle -- P=7.0, I=0.0, D=0.5
+  pid_steer.Init(0.15, 0.0165, 5.0, 30, 0, 0.1, 0.005, 1.0, 0.2);
+  pid_throttle.Init(7.0, 0.0, 0.5, 30, 0, 0.5, 0.005, 1.0, 0.1);
+
+
+  h.onMessage([&pid_steer, &pid_throttle,&obs_cnt](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -56,21 +71,50 @@ int main() {
           double cte = std::stod(j[1]["cte"].get<string>());
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
-          double steer_value;
+          //double steer_value;
           /**
            * TODO: Calculate steering value here, remember the steering value is
            *   [-1, 1].
            * NOTE: Feel free to play around with the throttle and speed.
            *   Maybe use another PID controller to control the speed!
            */
+          pid_steer.UpdateError(cte);
+          double steering_angle = pid_steer.Correction();
+
+          // the steeper steering angle, the lesser throttle
+          pid_throttle.UpdateError(std::max(fabs(steering_angle), fabs(cte)));
+          double throttle       = 1.0 + pid_throttle.Correction();
+          if (throttle > 1.0) {
+            throttle = 1.0;
+          } else if (throttle <= 0.0) {
+            throttle = 0.3;
+          }
+
+          // observation processed
+          ++obs_cnt;
+          
           
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
-                    << std::endl;
+          std::cout 
+              << "\n======[" << obs_cnt << "]======"
+              << "\nCross Track Error:               " << cte
+              << "\nCurrent Speed:                   " << speed
+              << "\nCurrent Steering Angle:          " << angle
+              << "\nPID Corrected Steering:          " << steering_angle
+              << "\nPID Steering Coefficients:       " <<   "Kp = " << pid_steer.Kp
+                                                       << ", Ki = " << pid_steer.Ki
+                                                       << ", Kd = " << pid_steer.Kd
+              << "\nPID Corrected Throttle:          " << throttle
+              << "\nPID Throttle Coefficients:       " <<   "Kp = " << pid_throttle.Kp
+                                                       << ", Ki = " << pid_throttle.Ki
+                                                       << ", Kd = " << pid_throttle.Kd
+              << "\n======[" << obs_cnt << "]======\n"
+              << std::endl;
+
 
           json msgJson;
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["steering_angle"] = steering_angle;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
