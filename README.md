@@ -34,7 +34,7 @@ $> build/pid
 #### Demo
 ![ANIMATION](readme_images/simulator-demo.gif)
 
-[![LINK TO YOUTUBE](readme_images/video.png)](https://youtu.be/vs8lae_L3XY)
+[![LINK TO YOUTUBE](readme_images/video.png)](https://yadi.sk/i/RvLoHFFD1f2s-Q)
 
 
 #### Description
